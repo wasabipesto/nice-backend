@@ -135,7 +135,7 @@ def submit():
     field.client_version = data.get('client_version', 'unknown')
     field.save()
 
-    return Response(200)
+    return 'Submission accepted.', 200
 
 # A method that runs the application server.
 if __name__ == "__main__":
