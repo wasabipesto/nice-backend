@@ -8,7 +8,7 @@ Square-cube pandigials ("nice" numbers) seem to be distributed pseudo-randomly. 
 
 Here we have two tricks: data and [dakka](https://tvtropes.org/pmwiki/pmwiki.php/Main/MoreDakka). With enough data on the "niceness" of many numbers, we may be able to find patterns in (or at least take guesses about) which regions are more likely to have nice numbers. Then once we have some tricks, we can start checking semi-randomly in the bases likely to have 100% nice numbers. With enough ~~dakka~~ processing time and luck, anything is possible!
 
-For more background, check out the [original article](https://beautifulthorns.wixsite.com/home/post/is-69-unique).
+For more background, check out the [original article](https://beautifulthorns.wixsite.com/home/post/is-69-unique) and [my findings](https://wasabipesto.com/nice).
 
 ## Where's the client?
 
