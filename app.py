@@ -2,12 +2,13 @@ from flask import Flask, request, Response
 from datetime import datetime, timedelta
 import peewee as pw
 import numpy as np
+import time
 import os
 
 # structure stolen from https://github.com/cpatrickalves/simple-flask-api/blob/master/app.py
 
 # peewee database config
-db = pw.SqliteDatabase('database.db')
+db = pw.SqliteDatabase('database.db', timeout=10)
 
 class BaseModel(pw.Model):
     class Meta:
@@ -79,7 +80,7 @@ def claim():
 @app.route('/submit', methods=['POST'])
 def submit():
     data = request.get_json()
-    print(data)
+    #print(data)
     
     # validation: check if all required fields are present
     if not data.get('search_id') or not data.get('unique_count'):
@@ -117,7 +118,11 @@ def submit():
     ]
     with db.atomic():
         for batch in pw.chunked(qty_uniques, 999):
-            UniqueCount.insert_many(batch).execute()
+            try:
+                UniqueCount.insert_many(batch).execute()
+            except peewee.OperationalError:
+                time.sleep(np.random.rand()*10)
+                UniqueCount.insert_many(batch).execute()
 
     near_misses = [
         {
@@ -128,12 +133,20 @@ def submit():
     ]
     with db.atomic():
         for batch in pw.chunked(near_misses, 999):
-            NearMiss.insert_many(batch).execute()
+            try:
+                NearMiss.insert_many(batch).execute()
+            except peewee.OperationalError:
+                time.sleep(np.random.rand()*10)
+                NearMiss.insert_many(batch).execute()
     
     field.completed_time = datetime.now()
     field.completed_by   = data.get('username', 'anonymous')
     field.client_version = data.get('client_version', 'unknown')
-    field.save()
+    try:
+        field.save()
+    except peewee.OperationalError:
+        time.sleep(np.random.rand()*10)
+        field.save()
 
     return 'Submission accepted.', 200
 
