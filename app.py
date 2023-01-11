@@ -44,6 +44,7 @@ app = Flask(__name__)
 
 @app.route('/claim', methods=['GET'])
 def claim():
+    valid_time = timedelta(hours=12)
     query_parameters = request.args
     claimed_by = query_parameters.get('username','anonymous')
 
@@ -51,14 +52,14 @@ def claim():
         field = ( # sequential
             SearchField.select().where(
                 (SearchField.completed_time == None),
-                (SearchField.claimed_time == None) | (SearchField.claimed_time < datetime.now()-timedelta(hours=2))
+                (SearchField.claimed_time == None) | (SearchField.claimed_time < datetime.now()-valid_time)
             ).order_by(SearchField.search_start).get()
         )
     else:
         field = ( # random
             SearchField.select().where(
                 (SearchField.completed_time == None),
-                (SearchField.claimed_time == None) | (SearchField.claimed_time < datetime.now()-timedelta(hours=2))
+                (SearchField.claimed_time == None) | (SearchField.claimed_time < datetime.now()-valid_time)
             ).order_by(pw.fn.Random()).get()
         )
     field.claimed_time = datetime.now()
@@ -72,7 +73,7 @@ def claim():
         'search_end':      field.search_end,
         'claimed_time':    field.claimed_time,
         'claimed_by':      field.claimed_by,
-        'expiration_time': field.claimed_time+timedelta(hours=2),
+        'expiration_time': field.claimed_time+valid_time,
     }
 
     return claimResponse
