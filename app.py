@@ -121,7 +121,7 @@ def submit():
         for batch in pw.chunked(qty_uniques, 999):
             try:
                 UniqueCount.insert_many(batch).execute()
-            except peewee.OperationalError:
+            except pw.OperationalError:
                 time.sleep(np.random.rand()*10)
                 UniqueCount.insert_many(batch).execute()
 
@@ -136,7 +136,7 @@ def submit():
         for batch in pw.chunked(near_misses, 999):
             try:
                 NearMiss.insert_many(batch).execute()
-            except peewee.OperationalError:
+            except pw.OperationalError:
                 time.sleep(np.random.rand()*10)
                 NearMiss.insert_many(batch).execute()
     
@@ -145,7 +145,7 @@ def submit():
     field.client_version = data.get('client_version', 'unknown')
     try:
         field.save()
-    except peewee.OperationalError:
+    except pw.OperationalError:
         time.sleep(np.random.rand()*10)
         field.save()
 
