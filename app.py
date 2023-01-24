@@ -64,7 +64,13 @@ def claim():
         )
     field.claimed_time = datetime.now()
     field.claimed_by   = query_parameters.get('username','anonymous')
-    field.save()
+    while True:
+        try:
+            field.save()
+            break
+        except:
+            time.sleep(np.random.rand()*10)
+            pass
 
     claimResponse = {
         'search_id':       field.id,
@@ -81,10 +87,11 @@ def claim():
 @app.route('/submit', methods=['POST'])
 def submit():
     data = request.get_json()
-    #print(data)
+    print(data)
     
     # validation: check if all required fields are present
     if not data.get('search_id') or not data.get('unique_count'):
+        print('Missing one or more required fields.')
         return 'Missing one or more required fields.', 400
     
     # get search field
@@ -92,19 +99,23 @@ def submit():
     
     # validation: check if the field is already completed
     if field.completed_by:
+        print('This field has already been completed.')
         return 'This field has already been completed.', 400
 
     # validation: check if the field hasn't been claimed
     if not field.claimed_by:
+        print('This field wasn\'t claimed.')
         return 'This field wasn\'t claimed.', 400
     
     # validation: check if unique_count has all digits present, from 1 to base
     for i in range(1,field.base+1):
         if not str(i) in data['unique_count'].keys():
+            print('Missing one or more digits in unique_count.')
             return 'Missing one or more digits in unique_count.', 400
 
     # validation: check if the sum of unique_count counts equals search_range
     if not sum(data['unique_count'].values()) == field.search_range:
+        print('Missing one or more counts in unique_count.')
         return 'Missing one or more counts in unique_count.', 400
 
     # validation: check the distribution of unique_count matches the near_misses
