@@ -69,7 +69,7 @@ def claim():
             field.claimed_by   = query_parameters.get('username','anonymous')
             field.save()
             break
-        except pw.OperationalError:
+        except:
             if i > 8:
                 print('Claim operation is waiting quite a while...')
             time.sleep(np.random.rand()*i)
@@ -139,7 +139,7 @@ def submit():
                 try:
                     UniqueCount.insert_many(batch).execute()
                     break
-                except pw.OperationalError:
+                except:
                     if i > 8:
                         print('UniqueCount insert operation is waiting quite a while...')
                     time.sleep(np.random.rand()*i)
@@ -157,7 +157,7 @@ def submit():
                 try:
                     NearMiss.insert_many(batch).execute()
                     break
-                except pw.OperationalError:
+                except:
                     if i > 8:
                         print('NearMiss insert operation is waiting quite a while...')
                     time.sleep(np.random.rand()*i)
@@ -167,7 +167,7 @@ def submit():
     for i in range(10):
         try:
             field.save()
-        except pw.OperationalError:
+        except:
             if i > 8:
                 print('Final submit operation is waiting quite a while...')
             time.sleep(np.random.rand()*10)
