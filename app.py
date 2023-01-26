@@ -48,29 +48,31 @@ def claim():
     query_parameters = request.args
     claimed_by = query_parameters.get('username','anonymous')
 
-    if np.random.random() > 0.25:
-        field = ( # sequential
-            SearchField.select().where(
-                (SearchField.completed_time == None),
-                (SearchField.claimed_time == None) | (SearchField.claimed_time < datetime.now()-valid_time)
-            ).order_by(SearchField.search_start).get()
-        )
-    else:
-        field = ( # random
-            SearchField.select().where(
-                (SearchField.completed_time == None),
-                (SearchField.claimed_time == None) | (SearchField.claimed_time < datetime.now()-valid_time)
-            ).order_by(pw.fn.Random()).get()
-        )
-    field.claimed_time = datetime.now()
-    field.claimed_by   = query_parameters.get('username','anonymous')
-    while True:
+    # retry loop: often times we get many claim requests simultaneously
+    for i in range(10):
         try:
+            if np.random.random() > 0.25:
+                field = ( # sequential
+                    SearchField.select().where(
+                        (SearchField.completed_time == None),
+                        (SearchField.claimed_time == None) | (SearchField.claimed_time < datetime.now()-valid_time)
+                    ).order_by(SearchField.search_start).get()
+                )
+            else:
+                field = ( # random
+                    SearchField.select().where(
+                        (SearchField.completed_time == None),
+                        (SearchField.claimed_time == None) | (SearchField.claimed_time < datetime.now()-valid_time)
+                    ).order_by(pw.fn.Random()).get()
+                )
+            field.claimed_time = datetime.now()
+            field.claimed_by   = query_parameters.get('username','anonymous')
             field.save()
             break
-        except:
-            time.sleep(np.random.rand()*10)
-            pass
+        except pw.OperationalError:
+            if i > 8:
+                print('Claim operation is waiting quite a while...')
+            time.sleep(np.random.rand()*i)
 
     claimResponse = {
         'search_id':       field.id,
@@ -87,7 +89,7 @@ def claim():
 @app.route('/submit', methods=['POST'])
 def submit():
     data = request.get_json()
-    print(data)
+    #print(data)
     
     # validation: check if all required fields are present
     if not data.get('search_id') or not data.get('unique_count'):
@@ -121,6 +123,9 @@ def submit():
     # validation: check the distribution of unique_count matches the near_misses
         # TODO
 
+    # save completed_time now, before potentially having to wait on db writes
+    field.completed_time = datetime.now()
+    
     qty_uniques = [
         {
             'field': field,
@@ -130,11 +135,14 @@ def submit():
     ]
     with db.atomic():
         for batch in pw.chunked(qty_uniques, 999):
-            try:
-                UniqueCount.insert_many(batch).execute()
-            except pw.OperationalError:
-                time.sleep(np.random.rand()*10)
-                UniqueCount.insert_many(batch).execute()
+            for i in range(10):
+                try:
+                    UniqueCount.insert_many(batch).execute()
+                    break
+                except pw.OperationalError:
+                    if i > 8:
+                        print('UniqueCount insert operation is waiting quite a while...')
+                    time.sleep(np.random.rand()*i)
 
     near_misses = [
         {
@@ -145,20 +153,24 @@ def submit():
     ]
     with db.atomic():
         for batch in pw.chunked(near_misses, 999):
-            try:
-                NearMiss.insert_many(batch).execute()
-            except pw.OperationalError:
-                time.sleep(np.random.rand()*10)
-                NearMiss.insert_many(batch).execute()
+            for i in range(10):
+                try:
+                    NearMiss.insert_many(batch).execute()
+                    break
+                except pw.OperationalError:
+                    if i > 8:
+                        print('NearMiss insert operation is waiting quite a while...')
+                    time.sleep(np.random.rand()*i)
     
-    field.completed_time = datetime.now()
     field.completed_by   = data.get('username', 'anonymous')
     field.client_version = data.get('client_version', 'unknown')
-    try:
-        field.save()
-    except pw.OperationalError:
-        time.sleep(np.random.rand()*10)
-        field.save()
+    for i in range(10):
+        try:
+            field.save()
+        except pw.OperationalError:
+            if i > 8:
+                print('Final submit operation is waiting quite a while...')
+            time.sleep(np.random.rand()*10)
 
     return 'Submission accepted.', 200
 
