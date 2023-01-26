@@ -44,12 +44,13 @@ app = Flask(__name__)
 
 @app.route('/claim', methods=['GET'])
 def claim():
+    max_retries = 10
     valid_time = timedelta(hours=12)
     query_parameters = request.args
     claimed_by = query_parameters.get('username','anonymous')
 
     # retry loop: often times we get many claim requests simultaneously
-    for i in range(10):
+    for i in range(max_retries):
         try:
             if np.random.random() > 0.25:
                 field = ( # sequential
@@ -70,8 +71,11 @@ def claim():
             field.save()
             break
         except:
-            if i > 8:
+            if i == max_retries - 2:
                 print('Claim operation is waiting quite a while...')
+            if i == max_retries - 1:
+                print('Claim operation timed out.')
+                return 'Claim operation timed out.', 500
             time.sleep(np.random.rand()*i)
 
     claimResponse = {
@@ -88,6 +92,7 @@ def claim():
 
 @app.route('/submit', methods=['POST'])
 def submit():
+    max_retries = 10
     data = request.get_json()
     #print(data)
     
@@ -135,13 +140,16 @@ def submit():
     ]
     with db.atomic():
         for batch in pw.chunked(qty_uniques, 999):
-            for i in range(10):
+            for i in range(max_retries):
                 try:
                     UniqueCount.insert_many(batch).execute()
                     break
                 except:
-                    if i > 8:
+                    if i == max_retries - 2:
                         print('UniqueCount insert operation is waiting quite a while...')
+                    if i == max_retries - 1:
+                        print('UniqueCount insert operation timed out.')
+                        return 'UniqueCount insert operation timed out.', 500
                     time.sleep(np.random.rand()*i)
 
     near_misses = [
@@ -153,23 +161,30 @@ def submit():
     ]
     with db.atomic():
         for batch in pw.chunked(near_misses, 999):
-            for i in range(10):
+            for i in range(max_retries):
                 try:
                     NearMiss.insert_many(batch).execute()
                     break
                 except:
-                    if i > 8:
+                    if i == max_retries - 2:
                         print('NearMiss insert operation is waiting quite a while...')
+                    if i == max_retries - 1:
+                        print('NearMiss insert operation timed out.')
+                        return 'NearMiss insert operation timed out.', 500
                     time.sleep(np.random.rand()*i)
     
+    max_retries *= 2 # double for the final stretch
     field.completed_by   = data.get('username', 'anonymous')
     field.client_version = data.get('client_version', 'unknown')
-    for i in range(10):
+    for i in range(max_retries):
         try:
             field.save()
         except:
-            if i > 8:
+            if i == max_retries - 2:
                 print('Final submit operation is waiting quite a while...')
+            if i == max_retries - 1:
+                print('Final submit operation timed out.')
+                return 'Final submit operation timed out.', 500
             time.sleep(np.random.rand()*10)
 
     return 'Submission accepted.', 200
