@@ -102,7 +102,17 @@ def submit():
         return 'Missing one or more required fields.', 400
     
     # get search field
-    field = SearchField.get_by_id(data['search_id'])
+    for i in range(max_retries):
+        try:
+            field = SearchField.get_by_id(data['search_id'])
+            break
+        except:
+            if i == max_retries - 2:
+                print('SearchField check-in operation is waiting quite a while...')
+            if i == max_retries - 1:
+                print('SearchField check-in operation timed out.')
+                return 'SearchField check-in operation timed out.', 500
+            time.sleep(np.random.rand()*i)
     
     # validation: check if the field is already completed
     if field.completed_by:
@@ -138,19 +148,18 @@ def submit():
             'count': data['unique_count'][unique],
         } for unique in data['unique_count']
     ]
-    with db.atomic():
-        for batch in pw.chunked(qty_uniques, 999):
-            for i in range(max_retries):
-                try:
-                    UniqueCount.insert_many(batch).execute()
-                    break
-                except:
-                    if i == max_retries - 2:
-                        print('UniqueCount insert operation is waiting quite a while...')
-                    if i == max_retries - 1:
-                        print('UniqueCount insert operation timed out.')
-                        return 'UniqueCount insert operation timed out.', 500
-                    time.sleep(np.random.rand()*i)
+    for batch in pw.chunked(qty_uniques, 999):
+        for i in range(max_retries):
+            try:
+                UniqueCount.insert_many(batch).execute()
+                break
+            except:
+                if i == max_retries - 2:
+                    print('UniqueCount insert operation is waiting quite a while...')
+                if i == max_retries - 1:
+                    print('UniqueCount insert operation timed out.')
+                    return 'UniqueCount insert operation timed out.', 500
+                time.sleep(np.random.rand()*i)
 
     near_misses = [
         {
@@ -159,19 +168,18 @@ def submit():
             'uniques': data['near_misses'][num],
         } for num in data['near_misses']
     ]
-    with db.atomic():
-        for batch in pw.chunked(near_misses, 999):
-            for i in range(max_retries):
-                try:
-                    NearMiss.insert_many(batch).execute()
-                    break
-                except:
-                    if i == max_retries - 2:
-                        print('NearMiss insert operation is waiting quite a while...')
-                    if i == max_retries - 1:
-                        print('NearMiss insert operation timed out.')
-                        return 'NearMiss insert operation timed out.', 500
-                    time.sleep(np.random.rand()*i)
+    for batch in pw.chunked(near_misses, 999):
+        for i in range(max_retries):
+            try:
+                NearMiss.insert_many(batch).execute()
+                break
+            except:
+                if i == max_retries - 2:
+                    print('NearMiss insert operation is waiting quite a while...')
+                if i == max_retries - 1:
+                    print('NearMiss insert operation timed out.')
+                    return 'NearMiss insert operation timed out.', 500
+                time.sleep(np.random.rand()*i)
     
     max_retries *= 2 # double for the final stretch
     field.completed_by   = data.get('username', 'anonymous')
