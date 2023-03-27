@@ -52,7 +52,7 @@ def claim():
     # retry loop: often times we get many claim requests simultaneously
     for i in range(max_retries):
         try:
-            if np.random.random() > 0.25:
+            if np.random.random() > 0.05:
                 field = ( # sequential
                     SearchField.select().where(
                         (SearchField.completed_time == None),
@@ -116,23 +116,23 @@ def submit():
     
     # validation: check if the field is already completed
     if field.completed_by:
-        print('This field has already been completed.')
+        print('Field', field.id, 'This field has already been completed.')
         return 'This field has already been completed.', 400
 
     # validation: check if the field hasn't been claimed
     if not field.claimed_by:
-        print('This field wasn\'t claimed.')
+        print('Field', field.id, 'This field wasn\'t claimed.')
         return 'This field wasn\'t claimed.', 400
     
     # validation: check if unique_count has all digits present, from 1 to base
     for i in range(1,field.base+1):
         if not str(i) in data['unique_count'].keys():
-            print('Missing one or more digits in unique_count.')
+            print('Field', field.id, 'Missing one or more digits in unique_count.')
             return 'Missing one or more digits in unique_count.', 400
 
     # validation: check if the sum of unique_count counts equals search_range
     if not sum(data['unique_count'].values()) == field.search_range:
-        print('Missing one or more counts in unique_count.')
+        print('Field', field.id, 'Missing one or more counts in unique_count.')
         return 'Missing one or more counts in unique_count.', 400
 
     # validation: check the distribution of unique_count matches the near_misses

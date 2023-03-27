@@ -1,4 +1,4 @@
 database.db
-database.db*
+database*.db*
 *.ipynb
 *.sh
